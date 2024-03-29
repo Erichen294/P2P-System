@@ -1,5 +1,23 @@
 import socket
 
+def receive_message():
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
+        server_socket.bind(('0.0.0.0', 65433))  # Bind to all available interfaces and the specified port
+        server_socket.listen()
+
+        print("Waiting for incoming messages...")
+
+        # Accept incoming connection
+        conn, addr = server_socket.accept()
+        with conn:
+            print(f"Connected by {addr}")
+
+            # Receive data from the connected client
+            data = conn.recv(1024)
+
+            # Return the received data (message)
+            return data.decode('utf-8')
+        
 class Peer:
     def __init__(self, username, ip_address, port):
         self.username = username

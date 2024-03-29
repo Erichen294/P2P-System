@@ -10,7 +10,7 @@ if __name__ == "__main__":
 
     # Receiving message
     while True:
-        message = receive_message()
+        message = networkClass.receive_message()
         if message:
             print(f"Received message: {message}")
             break 
