@@ -14,10 +14,13 @@ def receive_message(sender_port):
         conn, addr = server_socket.accept()
         with conn:
             # Receive data from the connected client
-            data = conn.recv(1024)
+            data = conn.recv(1024).decode('utf-8')
+
+            # Split the received data into sender's username and message content
+            sender_username, message_text = data.split(':', 1)
 
             # Return a Message object containing the sender and message content
-            return Message(addr[1], data.decode('utf-8'))
+            return Message(sender_username.strip(), message_text.strip())
 
         
 class Peer:
@@ -34,7 +37,10 @@ class Network:
         for peer in self.peers:
             self.send_message(peer, message)
 
-    def send_message(self, peer, message):
+    def send_message(self, peer, sender_username, message):
+        # Concatenate sender's username with the message
+        message = f"{sender_username}: {message}"
+
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
             client_socket.connect((peer.ip_address, peer.port))
             client_socket.sendall(message.encode('utf-8'))

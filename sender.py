@@ -2,21 +2,33 @@ import networkClass
 import threading
 import sys
 
+# Flag to track if a message has been received
+message_received = False
+
 def receive_messages():
+    global message_received
     try:
         while True:
             message = networkClass.receive_message(65434)
+            message_received = True
             if message:
-                print(f"\n{message.sender}: {message.text}\n", end='')
+                # Display received message on a new line
+                if message_received:
+                    print()
+                print(f"{message.sender}: {message.text}\nUser1: ", end='')
+                message_received = False
     except KeyboardInterrupt:
         print("Disconnecting...")
         sys.exit()
 
 def send_messages():
+    global message_received
     try:
         while True:
             message = input("User1: ")
-            network.send_message(networkClass.Peer("Receiver", "127.0.0.1", 65435), message)
+            # Clear the flag before sending a message
+            message_received = False
+            network.send_message(networkClass.Peer("Receiver", "127.0.0.1", 65435), "User1", message)
     except KeyboardInterrupt:
         print("Disconnecting...")
         sys.exit()
