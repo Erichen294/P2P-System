@@ -1,12 +1,12 @@
 import networkClass
 
 if __name__ == "__main__":
-    # Creating first peer
-    eric = networkClass.Peer("Eric", "10.239.90.181", 65432)
+    # Creating sender
+    sender = networkClass.Peer("Sender", "127.0.0.1", 65434)
 
     # Adding peer to network
     network = networkClass.Network()
-    network.add_peer(eric)
+    network.add_peer(sender)
 
     # Sending message
-    network.send_message(networkClass.Peer("Bob", "10.239.252.154", 65433), "Hello from Eric!")
+    network.send_message(networkClass.Peer("Receiver", "127.0.0.1", 65434), "Hello from Sender!")

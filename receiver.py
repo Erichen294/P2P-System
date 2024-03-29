@@ -2,11 +2,11 @@ import networkClass
 
 if __name__ == "__main__":
     # Creating Bob
-    bob = networkClass.Peer("Bob", "10.239.252.154", 65433)
+    receiver = networkClass.Peer("Receiver", "127.0.0.1", 65434)
 
     # Adding peer to network
     network = networkClass.Network()
-    network.add_peer(bob)
+    network.add_peer(receiver)
 
     # Receiving message
     while True:
