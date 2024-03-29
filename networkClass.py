@@ -10,13 +10,9 @@ def receive_message(sender_port):
         server_socket.bind(('0.0.0.0', sender_port))  # Bind to the sender's port
         server_socket.listen()
 
-        print("Waiting for incoming messages...")
-
         # Accept incoming connection
         conn, addr = server_socket.accept()
         with conn:
-            print(f"Connected by {addr}")
-
             # Receive data from the connected client
             data = conn.recv(1024)
 
