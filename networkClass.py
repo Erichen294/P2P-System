@@ -1,4 +1,34 @@
 import socket
+import sqlite3
+
+def create_database(name):
+    conn = sqlite3.connect(name)
+    c = conn.cursor()
+    try:
+        c.execute('''CREATE TABLE IF NOT EXISTS messages (
+                     sender_username TEXT,
+                     message TEXT
+                     )''')
+    except sqlite3.Error as e:
+        print(f"Error creating table: {e}")
+    finally:
+        conn.commit()
+        conn.close()
+
+def insert_message(sender_username, message, name):
+    conn = sqlite3.connect(name)
+    c = conn.cursor()
+    c.execute("INSERT INTO messages (sender_username, message) VALUES (?, ?)", (sender_username, message))
+    conn.commit()
+    conn.close()
+
+def get_messages(name):
+    conn = sqlite3.connect(name)
+    c = conn.cursor()
+    c.execute("SELECT sender_username, message FROM messages")
+    messages = c.fetchall()
+    conn.close()
+    return messages
 
 class Message:
     def __init__(self, sender, text):
