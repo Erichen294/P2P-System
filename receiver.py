@@ -20,6 +20,17 @@ cursor = connection.cursor()
 # Create the messages table if it doesn't exist
 networkClass.create_database(DB_FILE)
 
+# Function to fetch and print messages from the database
+def print_previous_messages():
+    messages = networkClass.get_messages(DB_FILE)
+    if messages:
+        print("Previous messages:")
+        for sender, text in messages:
+            print(f"{sender}: {text}")
+
+# Print previous messages before starting threads
+print_previous_messages()
+
 def receive_messages():
     global message_received, stop_threads
     try:
@@ -44,7 +55,7 @@ def send_messages():
         while not stop_threads:
             message = input("User2: ")
             message_received = False
-            network.send_message(networkClass.Peer("Receiver", "127.0.0.1", 65434), "User2", message)
+            network.send_message(networkClass.Peer("User1", "127.0.0.1", 65434), "User2", message)
             networkClass.insert_message("User2", message, DB_FILE)
     except KeyboardInterrupt:
         pass  
@@ -52,12 +63,12 @@ def send_messages():
         pass  
 
 if __name__ == "__main__":
-    # Create receiver
-    receiver = networkClass.Peer("Receiver", "127.0.0.1", 65434)
+    # Create user2
+    user2 = networkClass.Peer("User2", "127.0.0.1", 65434)
 
     # Add receiver to network
     network = networkClass.Network()
-    network.add_peer(receiver)
+    network.add_peer(user2)
 
     # Start threads for sending and receiving messages
     receive_thread = threading.Thread(target=receive_messages)
