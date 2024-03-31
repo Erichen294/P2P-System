@@ -20,13 +20,15 @@ cursor = connection.cursor()
 # Create the messages table if it doesn't exist
 networkClass.create_database(DB_FILE)
 
-# Function to fetch and print messages from the database
+# Function to fetch and print messages from the database if relevant
 def print_previous_messages():
     messages = networkClass.get_messages(DB_FILE)
     if messages:
         print("Previous messages:")
         for sender, text in messages:
-            print(f"{sender}: {text}")
+            # Check if the sender or receiver is the current conversation partner
+            if sender == "User2" or sender == "User1":
+                print(f"{sender}: {text}")
 
 # Print previous messages before starting threads
 print_previous_messages()
@@ -61,6 +63,9 @@ def send_messages():
         pass  
     except EOFError:
         pass  
+    finally:
+        print("Disconnecting...")
+        os._exit(0) 
 
 if __name__ == "__main__":
     # Create user1
