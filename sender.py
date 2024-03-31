@@ -41,7 +41,6 @@ def send_messages():
     try:
         while not stop_threads:
             message = input("User1: ")
-            # Clear the flag before sending a message
             message_received = False
             network.send_message(networkClass.Peer("Receiver", "127.0.0.1", 65435), "User1", message)
             networkClass.insert_message("User1", message, DB_FILE)
@@ -78,5 +77,5 @@ if __name__ == "__main__":
         receive_thread.join()
         send_thread.join()
     except KeyboardInterrupt:
-        stop_threads = True  # Set the flag to stop threads
-        os._exit(0)  # Exit the main thread forcefully
+        stop_threads = True  
+        os._exit(0)  
