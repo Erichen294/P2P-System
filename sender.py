@@ -17,6 +17,9 @@ DB_FILE = "user1.db"
 connection = sqlite3.connect(DB_FILE)
 cursor = connection.cursor()
 
+# Create the messages table if it doesn't exist
+networkClass.create_database(DB_FILE)
+
 def receive_messages():
     global message_received, stop_threads
     try:
@@ -33,8 +36,7 @@ def receive_messages():
         pass  
     finally:
         print("Disconnecting...")
-        connection.close()
-        os._exit(0)  
+        connection.close()  # Close the SQLite connection upon termination
 
 def send_messages():
     global message_received, stop_threads
@@ -48,10 +50,6 @@ def send_messages():
         pass  
     except EOFError:
         pass  
-    finally:
-        print("Disconnecting...")
-        connection.close()
-        os._exit(0) 
 
 if __name__ == "__main__":
     # Create sender
@@ -78,4 +76,4 @@ if __name__ == "__main__":
         send_thread.join()
     except KeyboardInterrupt:
         stop_threads = True  
-        os._exit(0)  
+        print("Main: Disconnecting...")  # Print a message indicating normal termination
