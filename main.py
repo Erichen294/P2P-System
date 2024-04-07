@@ -148,11 +148,11 @@ def connect_to_contact(user, contact):
         return -1, None, None
     
 # Function to start the user as a server
-def start_server(username):
+def start_server(server_name):
     # Query the user database for the current user's IP address and port
     conn = sqlite3.connect(DB_FILE_USERS)
     c = conn.cursor()
-    c.execute("SELECT ip_address, port FROM users WHERE username=?", (username,))
+    c.execute("SELECT ip_address, port FROM users WHERE username=?", (server_name,))
     user_info = c.fetchone()
     conn.close()
      
@@ -161,97 +161,61 @@ def start_server(username):
 
         # Create a socket object
         server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server_socket.bind((ip_address, port))
+        server_socket.listen()
+        print(f"Server started on {ip_address}:{port}")
 
-        try:
-            # Bind the socket to the user's IP address and port
-            server_socket.bind((ip_address, port))
-            print(f"Server started on {ip_address}:{port}")
+        while True:
+            client_socket, client_address = server_socket.accept()
+            print(f"Connection established with {client_address}")
 
-            # Listen for incoming connections
-            server_socket.listen()
-
-            while True:
-                # Accept a new connection
-                client_socket, client_address = server_socket.accept()
-                print(f"Connection established with {client_address}")
-
-                # Start a new thread or process to handle the client connection
-                handle_client_thread = threading.Thread(target=handle_client, args=(client_socket, username))
-                handle_client_thread.start()
-
-        except Exception as e:
-            print(f"Error starting server: {e}")
+            # Start a new thread to handle each client connection
+            client_thread = threading.Thread(target=handle_client, args=(server_name, client_socket))
+            client_thread.start()
 
     else:
         print("User not found.")
 
-def handle_client(client_socket, username):
+def handle_client(server_name, client_socket):
     """
     Function to handle client connection.
     You can implement your handling logic here.
     """
-    try:
-        while True:
-            # Receive message from the client
-            message = client_socket.recv(1024).decode("utf-8")
-            if message:
-                print(f"Received message from client: {message}")
+    while True:
+        # Receive message from the client
+        message = client_socket.recv(1024).decode("utf-8")
+        if not message:
+            break  # If the client closes the connection, exit the loop
+        print(f"Received message from client: {message}")
 
-                # Extract client's IP address and port from the message
-                client_ip, client_port, sender_username, client_message = message.split(':')
+        # Send a response back to the client
+        response = input(f"{server_name}: ")
+        client_socket.sendall(response.encode("utf-8"))
 
-                # Process the received message if needed
-                server_message = input(f"{username}: ")
-                client_socket.sendto(server_message.encode("utf-8"), (client_ip, int(client_port)))
-    except ConnectionResetError:
-        print("Connection with client closed.")
-        client_socket.close()
+    # Close the client socket when the client disconnects
+    client_socket.close()
+  
+def send_message(client, client_socket):
+    while True:
+        # Get message input from user
+        message = input(f"{client}: ")
+        
+        # Send the message to the server
+        client_socket.sendall(message.encode("utf-8"))
+        
+        # Receive response from the server
+        response = client_socket.recv(1024).decode("utf-8")
+        print(f"Server: {response}")
 
-def send_messages(username, contact_name, contact_ip, contact_port, client_ip, client_port):
-    global message_received, stop_threads
+def start_client(client, server_ip, server_port):
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    client_socket.connect((server_ip, server_port))
+    
+    print(f"Connected to server {server_ip}:{server_port}")
 
-    try:
-         # Connect to the contact's IP address and port
-        client_socket.connect((contact_ip, contact_port))
-
-        while not stop_threads:
-            # Get message input from user
-            message = input(f"{username}: ")
-            message_received = False
-            
-            full_message = f"{client_ip}:{client_port}:{username}: {message}"
-
-            # Send the message
-            client_socket.sendall(full_message.encode('utf-8'))
-            
-            # Insert message into the database
-            networkClass.insert_message(username, contact_name, message, DB_FILE_MESSAGES)
-            
-    except KeyboardInterrupt:
-        print("Disconnecting...")
-        client_socket.close()
-        os._exit(0)   
-    except EOFError:
-        print("Disconnecting...")
-        client_socket.close()
-        os._exit(0)   
-
-def receive_messages(username, client_ip, client_port):
-    global message_received, stop_threads
-    try:
-        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        client_socket.connect((client_ip, client_port))
-
-        while not stop_threads:
-            message, _ = client_socket.recvfrom(1024)
-            message = message.decode("utf-8")
-            if message:
-                print(f"{message}\n{username}: ", end='')
-    except KeyboardInterrupt:
-        print("Disconnecting...")
-        client_socket.close()
-        os._exit(0)   
+    # Start a thread to send messages
+    send_thread = threading.Thread(target=send_message, args=(client, client_socket))
+    send_thread.start()
 
 def get_user_info(username):
     conn = sqlite3.connect(DB_FILE_USERS)
@@ -293,32 +257,7 @@ def main():
                         contact = input("Enter the contact name: ")
                         connect, ip_address, port = connect_to_contact(user[0], contact)
                         if connect == 0:
-                            # Connection succeeded
-                            client = networkClass.Peer(user[0], user[2], user[3])
-                            network = networkClass.Network()
-                            network.add_peer(client)
-
-                            # Get client ip and port
-                            client_ip, client_port = get_user_info(user[0])
-
-                            # Start threads for sending and receiving messages
-                            receive_thread = threading.Thread(target=receive_messages, args=(user[0], client_ip, client_port))
-                            send_thread = threading.Thread(target=send_messages, args=(user[0], contact, ip_address, port, client_ip, client_port))
-
-                            # Set threads as daemon threads
-                            receive_thread.daemon = True
-                            send_thread.daemon = True
-
-                            receive_thread.start()
-                            send_thread.start()
-
-                            try:
-                                # Join threads to wait for their completion
-                                receive_thread.join()
-                                send_thread.join()
-                            except KeyboardInterrupt:
-                                stop_threads = True  
-                                print("Main: Disconnecting...")  # Print a message indicating normal termination
+                            start_client(user[0], ip_address, port)
                     elif inner_choice == "4":
                         start_server(user[0])
                     elif inner_choice == "5":
