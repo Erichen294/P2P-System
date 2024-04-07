@@ -6,7 +6,8 @@ def create_database(name):
     c = conn.cursor()
     try:
         c.execute('''CREATE TABLE IF NOT EXISTS messages (
-                     sender_username TEXT,
+                     sender TEXT,
+                     receiver TEXT,
                      message TEXT
                      )''')
     except sqlite3.Error as e:
@@ -15,10 +16,10 @@ def create_database(name):
         conn.commit()
         conn.close()
 
-def insert_message(sender_username, message, name):
+def insert_message(sender, receiver, message, name):
     conn = sqlite3.connect(name)
     c = conn.cursor()
-    c.execute("INSERT INTO messages (sender_username, message) VALUES (?, ?)", (sender_username, message))
+    c.execute("INSERT INTO messages (sender, receiver, message) VALUES (?, ?, ?)", (sender, receiver, message))
     conn.commit()
     conn.close()
 
