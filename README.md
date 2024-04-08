@@ -31,6 +31,15 @@ Set Up as Server: Choose option 4 to set up your machine as a server. This allow
 
 Log Out: Choose option 5 to log out.
 
+
+## Databases
+Each user will have their own database that stores all messages that they have sent or received. When first connecting to a user, the chat history with that user will be printed. The database naming scheme is {username}.db. 
+
+There is a user database that stores all the usernames, passwords, and ip addresses of users. It is checked against when a user tries to log in.
+
+There is a contacts database that holds all contacts of all users. Users can add contacts to the database and the option "view contacts" will allow users to display all their contacts.
+
+
 ## Documentation
 ![image](https://github.com/Erichen294/P2P-System/assets/98416392/2e8d3c8e-3cf8-45b1-8e40-7ac6d182de82)
 ![image](https://github.com/Erichen294/P2P-System/assets/98416392/f0a9ef81-40e6-4733-9105-d139181a161d)
