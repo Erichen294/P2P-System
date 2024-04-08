@@ -1,4 +1,6 @@
-Simple Chat Application
+# Simple Chat Application
+
+
 This is a simple chat application that allows users to register, log in, view contacts, add contacts, connect to other users, and exchange messages in real-time.
 
 Features
