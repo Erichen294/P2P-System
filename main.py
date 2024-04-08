@@ -146,7 +146,36 @@ def connect_to_contact(user, contact):
     else:
         print("Contact not found in your contacts list.")
         return -1, None, None
-    
+
+def fetch_chat_history(sender, receiver, db_name):
+    conn = sqlite3.connect(db_name)
+    c = conn.cursor()
+    c.execute("SELECT * FROM messages WHERE (sender=? OR receiver=?) OR (sender=? OR receiver=?)", (sender, receiver, receiver, sender))
+    messages = c.fetchall()
+    conn.close()
+
+    if messages:
+        print("Previous messages:")
+        for user1, user2, message in messages:
+                print(f"{user1}: {message}")
+
+
+def create_user_database(username):
+    db_file = f"{username}.db"
+    conn = sqlite3.connect(db_file)
+    c = conn.cursor()
+    try:
+        c.execute('''CREATE TABLE IF NOT EXISTS messages (
+                     sender TEXT,
+                     receiver TEXT,
+                     message TEXT
+                     )''')
+    except sqlite3.Error as e:
+        print(f"Error creating table: {e}")
+    finally:
+        conn.commit()
+        conn.close()
+
 # Function to start the user as a server
 def start_server(server_name):
     # Query the user database for the current user's IP address and port
@@ -165,13 +194,16 @@ def start_server(server_name):
         server_socket.listen()
         print(f"Server started on {ip_address}:{port}")
 
-        while True:
-            client_socket, client_address = server_socket.accept()
-            print(f"Connection established with {client_address}")
+        try:
+            while True:
+                client_socket, client_address = server_socket.accept()
+                print(f"Connection established with {client_address}")
 
-            # Start a new thread to handle each client connection
-            client_thread = threading.Thread(target=handle_client, args=(server_name, client_socket))
-            client_thread.start()
+                # Start a new thread to handle each client connection
+                client_thread = threading.Thread(target=handle_client, args=(server_name, client_socket))
+                client_thread.start()
+        except KeyboardInterrupt:
+            print("\nExiting server...")
 
     else:
         print("User not found.")
@@ -181,41 +213,71 @@ def handle_client(server_name, client_socket):
     Function to handle client connection.
     You can implement your handling logic here.
     """
-    while True:
-        # Receive message from the client
-        message = client_socket.recv(1024).decode("utf-8")
-        if not message:
-            break  # If the client closes the connection, exit the loop
-        print(f"Received message from client: {message}")
+    printHistory = True
+    try:
+        while True:
+            # Receive message from the client
+            message = client_socket.recv(1024).decode("utf-8")
+            if not message:
+                break  # If the client closes the connection, exit the loop
 
-        # Send a response back to the client
-        response = input(f"{server_name}: ")
-        client_socket.sendall(response.encode("utf-8"))
+            client, _, message = message.partition(':')
+            if printHistory:
+                printHistory = False
+                fetch_chat_history(client, server_name, f"{server_name}.db")
+            networkClass.insert_message(client, server_name, message.lstrip(), f"{server_name}.db")
+            print(f"{client}:{message}")
 
-    # Close the client socket when the client disconnects
-    client_socket.close()
+            # Send a response back to the client
+            response = input(f"{server_name}: ")
+            networkClass.insert_message(server_name, client, response, f"{server_name}.db")
+            response = f"{server_name}:{response}"
+            client_socket.sendall(response.encode("utf-8"))
+
+    except KeyboardInterrupt:
+        print("Exiting server...")
+        client_socket.close()
   
-def send_message(client, client_socket):
-    while True:
-        # Get message input from user
-        message = input(f"{client}: ")
-        
-        # Send the message to the server
-        client_socket.sendall(message.encode("utf-8"))
-        
-        # Receive response from the server
-        response = client_socket.recv(1024).decode("utf-8")
-        print(f"Server: {response}")
+def send_message(client, server_name, client_socket):
+    try:
+        while True:
+            # Get message input from user
+            message = input(f"{client}: ")
+            networkClass.insert_message(client, server_name, message, f"{client}.db")
+            message = f"{client}: {message}"
 
-def start_client(client, server_ip, server_port):
+            # Send the message to the server
+            client_socket.sendall(message.encode("utf-8"))
+            
+            # Receive response from the server
+            response = client_socket.recv(1024).decode("utf-8")
+            server, _, message = response.partition(':')
+            networkClass.insert_message(server_name, client, message, f"{client}.db")
+            print(f"{server}: {message}")
+
+    except KeyboardInterrupt:
+        print("Disconnecting...")
+        client_socket.close()
+        os._exit(0)
+    
+def start_client(client, server_name, server_ip, server_port):
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_socket.connect((server_ip, server_port))
     
     print(f"Connected to server {server_ip}:{server_port}")
 
+    fetch_chat_history(client, server_name, f"{client}.db")
+
     # Start a thread to send messages
-    send_thread = threading.Thread(target=send_message, args=(client, client_socket))
+    send_thread = threading.Thread(target=send_message, args=(client, server_name, client_socket))
     send_thread.start()
+
+    try:
+        send_thread.join()
+    except KeyboardInterrupt:
+        print("Disconnecting...")
+        client_socket.close()
+        os._exit(0)
 
 def get_user_info(username):
     conn = sqlite3.connect(DB_FILE_USERS)
@@ -229,7 +291,6 @@ def get_user_info(username):
 def main():
     create_users_table()
     create_contacts_table()
-    networkClass.create_database(DB_FILE_MESSAGES)
 
     while True:
         print("1. Register")
@@ -241,6 +302,7 @@ def main():
             register()
         elif choice == "2":
             user = login()
+            create_user_database(user[0])
             if user:
                 while True:
                     print("1. View contacts")
@@ -257,7 +319,7 @@ def main():
                         contact = input("Enter the contact name: ")
                         connect, ip_address, port = connect_to_contact(user[0], contact)
                         if connect == 0:
-                            start_client(user[0], ip_address, port)
+                            start_client(user[0], contact, ip_address, port)
                     elif inner_choice == "4":
                         start_server(user[0])
                     elif inner_choice == "5":
